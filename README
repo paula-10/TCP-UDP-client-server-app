@@ -1,0 +1,43 @@
+server.cpp
+- am utilizat tot biblioteca poll pentru multiplexare;
+incep cu 3 file descriptori (stdin, si cei 2 socketi, UDP si 
+cel de listen TCP)
+- fiecare conexiune a unui client nou creeaza un nou socket si 
+il retine in structura de multiplexare, precum si in lista de clienti
+(o lista de structuri care contine informatia de status <offline/online>,
+port, socket, id, ip si un flag message sent pe care il folosesc in
+cazul topicurilor cu wildcard
+- folosesc 2 liste de topicuri (structura care contine numele topicului si 
+o lista cu pointeri la clientii abonati la acel topic), una de topicuri normale
+si alta de topicuri wildcard; in momentul in care primesc date si trebuie sa transmit
+pe topicul respectiv, parcurg lista de subscriberi de la topicul ala si dau send la fiecare,
+marchez flag-ul lor, iar celor carora nu li s-a trimis, verific topicurile wildcard,
+si unde da match trimit si marchez iar (dupa aceea resetez flagurile)
+- pentru a simplifica procesul de matching am implementat 2 functii, una care 
+extrage partile dintre delimitatori / si alta care primeste un nume de topic si un wildcard,
+le sparge dupa delimitator / si da match (pe + ignora nivelul respectiv si avanseaza
+cu ambii tokeni si de la wildcard si de la topic, pe * incearca sa matchuiasca cat mai mult)
+
+subscriber.cpp
+- am utilizat biblioteca poll pentru a face multiplexare pe intrari 
+(stdin, respectiv server TCP)
+- primul lucru inainte de a intra in loop, trimit id-ul catre server
+- pentru comanda subscribe iau topicul, creez un mesaj cu continutul ca
+topic, si tipul de mesaj subscribe; pentru unsubscribe realizez acelasi
+lucru, doar ca tipul de mesaj este unsubscribe 
+- la exit trimit notificare server-ului si opresc loop-ul subscriberului
+- de la server poate primi urmatoarele tipuri de mesaje: already_connected,
+caz in care trebuie sa se inchida, precum si la server_exit la fel si tip 
+de mesaj topic pentru care utilizez functia de parsare a datelor
+- parseData - primeste continutul dintr-un mesaj si intoarce un string cu 
+datele parsate pentru a fi afisate, respectand conventia de reprezentare
+din cerinta
+
+
+utils.h
+- contine macrourile, bibliotecile si structurile de date folosite
+atat de subscriberi, cat si de server;
+- pentru a comunica prin TCP (subscriberi-server) am implementat
+aici functia de receive si send message; aceste functii transmit
+cate o structura de mesaj (contine tipul mesajului, o enumerare,
+si continutul efectiv)
